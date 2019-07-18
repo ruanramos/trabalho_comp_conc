@@ -1,31 +1,69 @@
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class Rooms {
+
+    private final Lock lock = new ReentrantLock();
+
+    private final Condition notEmpty = lock.newCondition();
+	private final Condition handlerRunning = lock.newCondition();
 
 	public interface Handler {
 		void onEmpty();
  	}
 
   	private int nRooms;
-  	private int ocpRooms = 0; // number of rooms currently occupied
+  	private int ocpRooms = 0; // número de ocupantes no quarto atual
 	private occpRoom = -1;
+	private boolean isHandlerRunning = false;
+	private boolean[] hasHandler;
 
   	public Rooms(int m) {
 		this.nRooms = m;
+		this.hasHandler = new boolean[m];
   	};
 
-	void synchronized enter(int i) {
+	void enter(int i) {
+		lock.lock();
+		// se não há nenhum quarto ocupado
+		while (isHandlerRunning)
+			handlerRunning.await();
 
-		while (this.ocpRooms > 0 || i  != occpRoom) {
-			try { wait(); } catch (InterruptedException e) { }
-            finally { }
+		try {
+			while (i  != occpRoom || occpRoom != -1)
+				notEmpty.await();
+
+			occpRoom = i;
+			ocpRooms += 1;
+
+		} catch (InterruptedException e) { }
+		finally {
+			lock.unlock();
 		}
+  	}
 
-		this.ocpRooms += 1; // increase the number of occupied
-  	};
+	boolean exit() {
+		lock.lock();
+		try {
 
-	boolean synchronized exit() {
+			ocpRooms--;
+			if (ocpRooms == 0 && hasHandler[occpRoom]) {
+				isHandlerRunning = true;
+				this.Handler.onEmpty();
+			}
 
-		return true;
-	};
+		} catch(Exception e) {}
+		finally {
+			isHandlerRunning = false;
+			lock.unlock();
+		}
+	}
 
-	public void synchronized setExitHandler(int i, Rooms.Handler h) { };
+	public void setExitHandler(int i, Rooms.Handler h) {
+		lock.lock();
+		h.onEmpty();
+		handlerRunning.signalAll();
+		lock.unlock();
+	}
 }
