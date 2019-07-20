@@ -15,13 +15,11 @@ public class SharedBathroomProblem1 {
     private static Random rnd = new Random();
 
     public static void main(String[] args) throws InterruptedException {
-        System.out.println("[Start]");
         Producer maleProducer = new Producer();
         maleProducer.start();
         TimeUnit.SECONDS.sleep(10);
         isStopped = true;
         maleProducer.join();
-        System.out.println("[End]");
     }
 
     protected static class Producer extends Thread {
@@ -80,12 +78,6 @@ public class SharedBathroomProblem1 {
             }
         }
     }
-
-//    void brushTeeth(int cnt) throws InterruptedException {
-//        System.out.println("[Female # " + cnt + " starts teeth brushing]");
-//        TimeUnit.MILLISECONDS.sleep(rnd.nextInt(100));
-//        System.out.println("[Female # " + cnt + " end teeth brushing]");
-//    }
 
     protected static class Bathroom {
 
